@@ -16,4 +16,4 @@ MonoBehaviour:
   crossRoadsIcon: {fileID: 3460313422488678363, guid: 193f8a06587a44b4581d07211e91136d,
     type: 3}
   combatIcon: {fileID: 0}
-  note: {fileID: 3165289286966779171, guid: 3acf6c138d6eb954996b985b5162b9ee, type: 3}
+  note: {fileID: 21300000, guid: 1524302d04fc2bc4c806b7a25e1a2885, type: 3}
