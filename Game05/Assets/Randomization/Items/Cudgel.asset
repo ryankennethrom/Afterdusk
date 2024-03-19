@@ -17,4 +17,4 @@ MonoBehaviour:
     type: 3}
   combatIcon: {fileID: 6892274491808584661, guid: 8b7d8f8650ddc974f9edf11ec316c191,
     type: 3}
-  note: {fileID: 6846196944320957783, guid: 527685891ec1e004094e44b03b117adf, type: 3}
+  note: {fileID: 21300000, guid: 2822088ba0d08d1468af94be0a2fdb74, type: 3}
