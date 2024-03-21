@@ -9528,7 +9528,7 @@ MonoBehaviour:
   - {fileID: 176108216}
   - {fileID: 1803153050}
   dialogueCSVs:
-  - {fileID: 4900000, guid: d964b750ffd7f4087951ff1175f63796, type: 3}
+  - {fileID: 4900000, guid: adb3355b6cde34245ac1a17ce6755754, type: 3}
   - {fileID: 4900000, guid: 7627185fbfae04378a6369f3c66f6cac, type: 3}
   choiceTexts:
   - The Red Bookmark

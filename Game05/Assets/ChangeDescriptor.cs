@@ -7,7 +7,7 @@ public class ChangeDescriptor : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        int difficulty = PlayerPrefs.GetInt("Difficulty");
+        int difficulty = 1;
         if (difficulty == 1)
 		{
             transform.Find("Text").gameObject.SetActive(false);

@@ -65,6 +65,7 @@ public class BattleSystem : MonoBehaviour
     private float enemyAttackModifier = 1.0f;
     public float playerAttackModifier = 1.0f;
     public float attackBuff = 1.0f;
+    public float attackBuffAlt = 1.0f;
     private float enemyHpMod = 1.0f;
     public float playerHpMod = 1.0f;
     public int maxEnemyShield = 16;
@@ -84,6 +85,14 @@ public class BattleSystem : MonoBehaviour
     public int venomRestore = 0;
     public int handsRestore = 0;
     public int hairRestore = 0;
+    // Alt is for puppet items
+    public int mirrorRestoreAlt = 0;
+    public int clothRestoreAlt = 0;
+    public int ballRestoreAlt = 0;
+    public int appleRestoreAlt = 0;
+    public int venomRestoreAlt = 0;
+    public int handsRestoreAlt = 0;
+    public int hairRestoreAlt = 0;
     public GameObject mirrorObject;
     public GameObject clothObject;
     public GameObject shoesObject;
@@ -106,6 +115,11 @@ public class BattleSystem : MonoBehaviour
     private int vampirismMax = 1;
     private int bindMax = 1;
     private int stunMax = 1;
+    private int reflectMaxAlt = 1;
+    private int dmgBoostMaxAlt = 1;
+    private int vampirismMaxAlt = 1;
+    private int bindMaxAlt = 1;
+    private int stunMaxAlt = 1;
 
     // Item First Use Trackers
     private bool CudgelFirstUse;
@@ -134,6 +148,7 @@ public class BattleSystem : MonoBehaviour
     public GameObject x3Text;
     public TextMeshProUGUI playerDamageText;
     public TextMeshProUGUI maxText;
+    public TextMeshProUGUI maxTextAlt;
     public TextMeshProUGUI enemyDamageText;
     public TextMeshProUGUI enemyDamageText2;
     private int shieldCounter = 0;
@@ -162,6 +177,8 @@ public class BattleSystem : MonoBehaviour
     public AudioSource theDie;
     public AudioSource gameOver;
     public VideoPlayer increaseMusicSpeed;
+    public bool easy = true;
+    public bool puppetFight = false;
 
     void Start(){
         state = BattleState.START;
@@ -195,8 +212,7 @@ public class BattleSystem : MonoBehaviour
         choicesInterface.GetComponent<Canvas>().enabled = false;
         playerStats = player.GetComponent<Stats>();
         enemyStats = enemy.GetComponent<Stats>();
-        int difficulty = PlayerPrefs.GetInt("Difficulty");
-        if (difficulty == 1)
+        if (easy)
         {
             enemyStats.maxHP = 30;
             enemyStats.currentHP = 30;
@@ -212,6 +228,12 @@ public class BattleSystem : MonoBehaviour
         }
         playerHUD.SetHUD(playerStats);
         enemyHUD.SetHUD(enemyStats);
+        if (puppetFight)
+        {
+            introAttacks = new List<int>(new int[] { });
+            attackVariants = 17;
+            Wait();
+        }
     }
 
     public void Wait()
@@ -224,7 +246,8 @@ public class BattleSystem : MonoBehaviour
     IEnumerator StartIntro(){
         skip.SetActive(false);
         miniNarrator.SetActive(true);
-        enemy.GetComponent<Animator>().SetTrigger("Fine Again");
+        if (!puppetFight)
+            enemy.GetComponent<Animator>().SetTrigger("Fine Again");
         windParticles.SetActive(true);
         var windMain = windParticles.GetComponent<ParticleSystem>().main;
         windMain.simulationSpeed = 1;
@@ -251,11 +274,15 @@ public class BattleSystem : MonoBehaviour
         playerHUD.gameObject.SetActive(true);
         enemyHUD.gameObject.SetActive(true);
         player.GetComponent<Animator>().SetTrigger("Fight");
+        if (puppetFight)
+            enemy.GetComponent<Animator>().SetTrigger("Fight");
         PlayerTurn();
         EnemyAttackIndicatorController.Instance.TurnOnSprites();
         secondAttack.TurnOnSprites();
         thirdAttack.TurnOnSprites();
         int firstAttack = Random.Range(0, 4);
+        if (puppetFight)
+            firstAttack = Random.Range(7, 15);
         EnemyAttackIndicatorController.Instance.enableIndicator(firstAttack);
         DoTheMario(firstAttack);
         pointer.SetActive(true);
@@ -324,8 +351,7 @@ public class BattleSystem : MonoBehaviour
 
     IEnumerator DelayedPhase3()
 	{
-        Debug.Log("Fuck the fuck off");
-        yield return new WaitForSeconds(beatTime * 35);
+        yield return new WaitForSeconds(beatTime * 50);
         phaseTransition.SetTrigger("Phase 3");
         ChangeIdleAnimation(enemyAnim, angry2);
         phaseChange.MakeConversation(2, 10.15873015873016f / 2);
@@ -349,9 +375,7 @@ public class BattleSystem : MonoBehaviour
         
         if ((enemyStats.currentHP <= 0.5 * enemyStats.maxHP) && phase == 1)
         {
-            phaseTransition.SetTrigger("Phase 2");
             ChangeIdleAnimation(enemyAnim, angry1);
-            thacamra.enabled = true;
             phaseChange.MakeConversation(1, beatTime * 16);
             var windMain = windParticles.GetComponent<ParticleSystem>().main;
             windMain.simulationSpeed = 5;
@@ -361,11 +385,11 @@ public class BattleSystem : MonoBehaviour
             phase = 2;
             if ((enemyStats.currentHP <= 0.25 * enemyStats.maxHP))
             {
-                StartCoroutine(BePatient((beatTime * 35) + 11.15873015873016f));
+                StartCoroutine(BePatient((beatTime * 50) + 11.15873015873016f));
                 StartCoroutine(DelayedPhase3());
             }
             else
-                StartCoroutine(BePatient(beatTime * 32));
+                StartCoroutine(BePatient(beatTime * 48));
 
             secondAttack.enableIndicator(0);
             DoTheMario(0);
@@ -392,6 +416,8 @@ public class BattleSystem : MonoBehaviour
             maxShield = true;
         }
 
+        ReduceEffects(enemyStats, playerStats);
+        ReduceCooldownsAlt();
         enemyHpMod = 1.0f;
 
         playerAttackModifier = 1;
@@ -406,12 +432,15 @@ public class BattleSystem : MonoBehaviour
             }
         }
 
+        enemyAttackModifier = 1;
+        if (enemyStats.dmgBoost)
+        {
+            enemyAttackModifier = enemyAttackModifier + (0.37f * dmgBoostMaxAlt);
+        }
         if (enemyStats.bind)
         {
-            enemyAttackModifier = 1 - (0.25f * playerHpMod*bindMax);
+            enemyAttackModifier = enemyAttackModifier - (0.25f * playerHpMod * bindMax);
         }
-        else
-            enemyAttackModifier = 1;
 
         doneAttacks.Clear();
         doubleDoneAttacks.Clear();
@@ -441,6 +470,46 @@ public class BattleSystem : MonoBehaviour
         else if (EnemyAttackIndicatorController.Instance.getEnabledIndicator() == 6)
         {
             StartCoroutine(ShieldAttack());
+        }
+        else if (EnemyAttackIndicatorController.Instance.getEnabledIndicator() == 7)
+        {
+            StartCoroutine(CudgelAttack());
+        }
+        else if (EnemyAttackIndicatorController.Instance.getEnabledIndicator() == 8)
+        {
+            StartCoroutine(ClothHeal());
+        }
+        else if (EnemyAttackIndicatorController.Instance.getEnabledIndicator() == 9)
+        {
+            StartCoroutine(HandsDefense());
+        }
+        else if (EnemyAttackIndicatorController.Instance.getEnabledIndicator() == 10)
+        {
+            StartCoroutine(HatAttack());
+        }
+        else if (EnemyAttackIndicatorController.Instance.getEnabledIndicator() == 11)
+        {
+            StartCoroutine(MirrorBuff());
+        }
+        else if (EnemyAttackIndicatorController.Instance.getEnabledIndicator() == 12)
+        {
+            StartCoroutine(AppleBuff());
+        }
+        else if (EnemyAttackIndicatorController.Instance.getEnabledIndicator() == 13)
+        {
+            StartCoroutine(VenomBuff());
+        }
+        else if (EnemyAttackIndicatorController.Instance.getEnabledIndicator() == 14)
+        {
+            StartCoroutine(HairAttack());
+        }
+        else if (EnemyAttackIndicatorController.Instance.getEnabledIndicator() == 15)
+        {
+            StartCoroutine(BallBuff());
+        }
+        else if (EnemyAttackIndicatorController.Instance.getEnabledIndicator() == 16)
+        {
+            StartCoroutine(ShoesAttack());
         }
     }
 
@@ -493,7 +562,7 @@ public class BattleSystem : MonoBehaviour
         yield return new WaitForSeconds(3.6667f);
         phaseChange.MakeConversation(3, 3.5555f);
         yield return new WaitForSeconds(31.3333f);
-        winCanvas.SetActive(true);
+        SceneChanger.Instance.FadeToNextScene();
     }
 
     IEnumerator LoseSequence()
@@ -569,81 +638,124 @@ public class BattleSystem : MonoBehaviour
         }
     }
 
-    void ReduceEffects()
+    void ReduceEffects(Stats stats, Stats statsALt)
 	{
         // Reduces Duration of Buffs and Debuffs
-        if (playerStats.currentReflectDuration > 0)
+        if (stats.currentReflectDuration > 0)
         {
-            playerStats.currentReflectDuration -= 1;
-            if (playerStats.currentReflectDuration == 0)
+            stats.currentReflectDuration -= 1;
+            if (stats.currentReflectDuration == 0)
             {
-                playerStats.reflect = false;
-                if (reflectMax >= 2)
-                    EnableItem(mirrorObject);
-                reflectMax = 1;
-                mirrorObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = false;
-                UpdateEffectDisplay(playerStats.buffDisplay, playerStats.buffText, true, playerStats);
+                stats.reflect = false;
+                if (stats == playerStats)
+                {
+                    if (reflectMax >= 2)
+                        EnableItem(mirrorObject);
+                    reflectMax = 1;
+                    mirrorObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = false;
+                }
+                else
+                    reflectMaxAlt = 1;
+                UpdateEffectDisplay(stats.buffDisplay, stats.buffText, true, stats);
             }
         }
-        if (playerStats.currentDmgBoostDuration > 0)
+        if (stats.currentDmgBoostDuration > 0)
         {
-            playerStats.currentDmgBoostDuration -= 1;
-            if (playerStats.currentDmgBoostDuration == 0)
+            stats.currentDmgBoostDuration -= 1;
+            if (stats.currentDmgBoostDuration == 0)
             {
-                playerStats.dmgBoost = false;
-                if (dmgBoostMax >= 2)
-                    EnableItem(appleObject);
-                dmgBoostMax = 1;
-                mirrorObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = false;
-                UpdateEffectDisplay(playerStats.buffDisplay, playerStats.buffText, true, playerStats);
+                stats.dmgBoost = false;
+                if (stats == playerStats)
+                {
+                    if (dmgBoostMax >= 2)
+                        EnableItem(appleObject);
+                    dmgBoostMax = 1;
+                    appleObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = false;
+                }
+                else
+                    dmgBoostMaxAlt = 1;
+                UpdateEffectDisplay(stats.buffDisplay, stats.buffText, true, stats);
             }
         }
-        if (playerStats.currentVampirismDuration > 0)
+        if (stats.currentVampirismDuration > 0)
         {
-            playerStats.currentVampirismDuration -= 1;
-            if (playerStats.currentVampirismDuration == 0)
+            stats.currentVampirismDuration -= 1;
+            if (stats.currentVampirismDuration == 0)
             {
-                playerStats.vampirism = false;
-                if (vampirismMax >= 2)
-                    EnableItem(venomObject);
-                vampirismMax = 1;
-                mirrorObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = false;
-                UpdateEffectDisplay(playerStats.buffDisplay, playerStats.buffText, true, playerStats);
+                stats.vampirism = false;
+                if (stats == playerStats)
+                {
+                    if (vampirismMax >= 2)
+                        EnableItem(venomObject);
+                    vampirismMax = 1;
+                    venomObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = false;
+                }
+                else
+                    vampirismMaxAlt = 1;
+                UpdateEffectDisplay(stats.buffDisplay, stats.buffText, true, stats);
             }
         }
-        if (playerStats.currentStunDuration > 0)
+        if (stats.currentStunDuration > 0)
         {
-            playerStats.currentStunDuration -= 1;
-            if (playerStats.currentStunDuration == 0)
+            stats.currentStunDuration -= 1;
+            if (stats.currentStunDuration == 0)
             {
-                playerStats.stun = false;
-                UpdateEffectDisplay(playerStats.debuffDisplay, playerStats.debuffText, false, playerStats);
+                stats.stun = false;
+                UpdateEffectDisplay(stats.debuffDisplay, stats.debuffText, false, stats);
             }
         }
-        if (enemyStats.currentBindDuration > 0)
+        if (stats.currentBindDuration > 0)
         {
-            enemyStats.currentBindDuration -= 1;
-            if (enemyStats.currentBindDuration == 0)
+            stats.currentBindDuration -= 1;
+            if (stats.currentBindDuration == 0)
             {
-                enemyStats.bind = false;
-                if (bindMax >= 2)
-                    EnableItem(hairObject);
-                bindMax = 1;
-                mirrorObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = false;
-                UpdateEffectDisplay(enemyStats.debuffDisplay, enemyStats.debuffText, false, enemyStats);
+                stats.bind = false;
+                if (statsALt == playerStats)
+                {
+                    if (bindMax >= 2)
+                        EnableItem(hairObject);
+                    bindMax = 1;
+                    hairObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = false;
+                }
+                else
+                    bindMaxAlt = 1;
+                UpdateEffectDisplay(stats.debuffDisplay, stats.debuffText, false, stats);
             }
         }
-        if (enemyStats.currentStunDuration > 0)
+        if (statsALt.currentBindDuration > 0)
         {
-            enemyStats.currentStunDuration -= 1;
-            if (enemyStats.currentStunDuration == 0)
+            statsALt.currentBindDuration -= 1;
+            if (statsALt.currentBindDuration == 0)
             {
-                enemyStats.stun = false;
-                if (stunMax >= 2)
-                    EnableItem(shoesObject);
-                stunMax = 1;
-                mirrorObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = false;
-                UpdateEffectDisplay(enemyStats.debuffDisplay, enemyStats.debuffText, false, enemyStats);
+                statsALt.bind = false;
+                if (stats == playerStats)
+                {
+                    if (bindMax >= 2)
+                        EnableItem(hairObject);
+                    bindMax = 1;
+                    hairObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = false;
+                }
+                else
+                    bindMaxAlt = 1;
+                UpdateEffectDisplay(statsALt.debuffDisplay, statsALt.debuffText, false, statsALt);
+            }
+        }
+        if (statsALt.currentStunDuration > 0)
+        {
+            statsALt.currentStunDuration -= 1;
+            if (statsALt.currentStunDuration == 0)
+            {
+                statsALt.stun = false;
+                if (stats == playerStats)
+                {
+                    if (stunMax >= 2)
+                        EnableItem(shoesObject);
+                    stunMax = 1;
+                    shoesObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = false;
+                }
+                else
+                    stunMaxAlt = 1;
+                UpdateEffectDisplay(statsALt.debuffDisplay, statsALt.debuffText, false, statsALt);
             }
         }
     }
@@ -713,6 +825,39 @@ public class BattleSystem : MonoBehaviour
             {
                 EnableItem(hairObject);
             }
+        }
+    }
+
+    void ReduceCooldownsAlt()
+    {
+        // Reduces Duration of Cooldowns
+        if (mirrorRestoreAlt > 0)
+        {
+            mirrorRestoreAlt -= 1;
+        }
+        if (clothRestoreAlt > 0)
+        {
+            clothRestoreAlt -= 1;
+        }
+        if (ballRestoreAlt > 0)
+        {
+            ballRestoreAlt -= 1;
+        }
+        if (appleRestoreAlt > 0)
+        {
+            appleRestoreAlt -= 1;
+        }
+        if (venomRestoreAlt > 0)
+        {
+            venomRestoreAlt -= 1;
+        }
+        if (handsRestoreAlt > 0)
+        {
+            handsRestoreAlt -= 1;
+        }
+        if (hairRestoreAlt > 0)
+        {
+            hairRestoreAlt -= 1;
         }
     }
 
@@ -817,11 +962,11 @@ public class BattleSystem : MonoBehaviour
         }
 
         transitionMusic();
-        ReduceEffects();
+        ReduceEffects(playerStats, enemyStats);
         ReduceCooldowns();
 
 
-        if (!playerStats.stun)
+        if (!playerStats.stun && !playerStats.bind)
 		{
             shoesObject.GetComponent<Button>().interactable = false;
             shoesObject.transform.Find("ItemIcon").gameObject.GetComponent<Image>().color = new Color(0.4f, 0.4f, 0.4f, 1.0f);
@@ -847,13 +992,18 @@ public class BattleSystem : MonoBehaviour
             }
         }
 
+        playerAttackModifier = 1;
         if (playerStats.dmgBoost)
 		{
-            playerAttackModifier = 1 + (0.25f * playerHpMod*dmgBoostMax);
+            playerAttackModifier = playerAttackModifier + (0.25f * playerHpMod*dmgBoostMax);
 		}
+        if (playerStats.bind)
+        {
+            playerAttackModifier = playerAttackModifier - (0.37f * bindMaxAlt);
+        }
         //=========================
 
-        
+
         EventSystem.current.SetSelectedGameObject(null);
         OnInventoryButton();
     }
@@ -1094,13 +1244,15 @@ public class BattleSystem : MonoBehaviour
 
     IEnumerator Phase2MusicTransition()
 	{
-
         MC100.Stop();
         MC50.Stop();
         MC25.Stop();
         MC100Switch.StopAllCoroutines();
         MC50Switch.StopAllCoroutines();
         MC25Switch.StopAllCoroutines();
+        yield return new WaitForSeconds(beatTime * 16);
+        phaseTransition.SetTrigger("Phase 2");
+        thacamra.enabled = true;
         AudioSource transitionTo;
         if (playerStats.currentHP <= (playerStats.maxHP * 0.25f))
 		{
@@ -1160,21 +1312,33 @@ public class BattleSystem : MonoBehaviour
         {
             transitionTo = MC100SW25;
         }
-        
-        while (currentSong.pitch < 1.1)
-        {
-            currentSong.pitch += 0.1f * Time.deltaTime / 10.15873015873016f;
-            yield return null;
-        }
-        StartCoroutine(Phase2MusicQuickStop(currentSong));
 
-        transitionTo.volume = startVolume;
+        transitionTo.volume = 0;
         MC25SW25.time = currentSong.time / 1.1f;
         MC50SW25.time = currentSong.time / 1.1f;
         MC100SW25.time = currentSong.time / 1.1f;
         MC25SW25.Play();
         MC50SW25.Play();
         MC100SW25.Play();
+        transitionTo.pitch = 0.9f;
+
+        while (currentSong.pitch < 1.1)
+        {
+            currentSong.pitch += 0.1f * Time.deltaTime / 10.15873015873016f;
+            transitionTo.pitch += 0.1f * Time.deltaTime / 10.15873015873016f;
+            if (currentSong.pitch >= 1.05f)
+            {
+                currentSong.volume -= startVolume * Time.deltaTime / 10.15873015873016f/2;
+                transitionTo.volume += startVolume * Time.deltaTime / 10.15873015873016f/2;
+            }
+            yield return null;
+        }
+        MC25SW25.time = currentSong.time / 1.1f;
+        MC50SW25.time = currentSong.time / 1.1f;
+        MC100SW25.time = currentSong.time / 1.1f;
+        StartCoroutine(Phase2MusicQuickStop(currentSong));
+
+        transitionTo.volume = startVolume;
         currentSong = transitionTo;
         phase3Particles.SetActive(true);
         windEffect.SetTrigger("Windy");
@@ -1211,6 +1375,22 @@ public class BattleSystem : MonoBehaviour
 		{
             return maxAttack >= enemyStats.barrier + enemyStats.currentHP;
         }
+    }
+
+    bool EnemyHasDebuffs()
+	{
+        if (enemyStats.bind || enemyStats.stun)
+            return true;
+        else
+            return false;
+	}
+
+    bool EnemyHasBuffs()
+    {
+        if (enemyStats.dmgBoost || enemyStats.reflect || enemyStats.vampirism)
+            return true;
+        else
+            return false;
     }
 
     // Methods for Enemy Actions ===================================================================
@@ -1478,10 +1658,27 @@ public class BattleSystem : MonoBehaviour
         }
     }
 
-    void ChooseNextAttack(int counter, int attackType, EnemyAttackIndicatorController attackDisplay)
+    void ChooseNextAttack(int counter, int attackType, EnemyAttackIndicatorController attackDisplay, int itemCooldown = 0)
 	{
+        if (puppetFight && phase == 1)
+        {
+            if (attackType >= 11)
+                attackVariants = 11;
+            else if (EnemyHasBuffs() || EnemyHasDebuffs())
+            {
+                if (EnemyHasBuffs())
+                    attackVariants = 16;
+                if (EnemyHasDebuffs())
+                    attackVariants = 17;
+            }
+            else
+                attackVariants = 15;
+        }
+        int startingAttack = 0;
+        if (puppetFight && phase == 1)
+            startingAttack = 7;
         maxShield = false;
-        int enemyAttackType = Random.Range(0, attackVariants);
+        int enemyAttackType = Random.Range(startingAttack, attackVariants);
         if (CheckMaxAttack() && phase == 2 && attackAmount == 2 && !doneAttacks.Contains(0))
         {
             enemyAttackType = 0;
@@ -1493,21 +1690,21 @@ public class BattleSystem : MonoBehaviour
 		}
         else
         {
-            if (CheckMaxAttack())
+            if (CheckMaxAttack() && (!puppetFight || phase > 1))
             {
                 enemyAttackType = Random.Range(1, attackVariants);
             }
             if ((counter >= 2) && enemyAttackType == attackType)
             {
-                enemyAttackType = Random.Range(0, attackVariants);
-                if (CheckMaxAttack())
+                enemyAttackType = Random.Range(startingAttack, attackVariants);
+                if (CheckMaxAttack() && (!puppetFight || phase > 1))
                 {
                     enemyAttackType = Random.Range(1, attackVariants);
                 }
                 if (enemyAttackType == attackType)
                 {
                     enemyAttackType = attackType - 1;
-                    if ((CheckMaxAttack() && attackType - 1 == 0) || enemyAttackType < 0)
+                    if ((CheckMaxAttack() && attackType - 1 == 0) || enemyAttackType < startingAttack)
                         enemyAttackType = attackVariants - 1;
                 }
             }
@@ -1518,7 +1715,7 @@ public class BattleSystem : MonoBehaviour
                     enemyAttackType = attackVariants - 1;
             }
 
-            if ((!introAttacks.Contains(enemyAttackType)) && introAttacks.Count > 0)
+            if (((!introAttacks.Contains(enemyAttackType)) && introAttacks.Count > 0) && (!puppetFight || phase > 1))
             {
                 if (enemyAttackType > introAttacks[0])
                 {
@@ -1561,11 +1758,60 @@ public class BattleSystem : MonoBehaviour
             introAttacks.Remove(enemyAttackType);
         }
         int randomShieldChance = Random.Range(1, 3);
+        if (EnemyHasDebuffs() && puppetFight && phase == 1)
+		{
+            if (Random.Range(0, 2) == 1)
+			{
+                enemyAttackType = 16;
+			}
+		}
+        else if (attackVariants == 11 && attackType != 15 && ballRestoreAlt <= 0)
+		{
+            if (Random.Range(0, 3) == 1)
+            {
+                enemyAttackType = 15;
+            }
+        }
+        if (enemyStats.currentHP == enemyStats.maxHP && enemyAttackType == 8)
+            enemyAttackType = 9;
+        if (enemyAttackType < 16)
+            itemCooldown = PreviousItemCooldown(enemyAttackType + 1);
+        else
+            itemCooldown = 0;
+        while (itemCooldown > 0)
+		{
+            itemCooldown = PreviousItemCooldown(enemyAttackType);
+            enemyAttackType -= 1;
+		}
+        if (!EnemyHasBuffs() && enemyAttackType == 15)
+            enemyAttackType = 16;
+        if (enemyAttackType <= 6 && puppetFight && phase == 1)
+            enemyAttackType = 10;
+        if (enemyAttackType == 16 && puppetFight && phase == 1 && attackType == 16)
+            enemyAttackType = 7;
         if (enemyStats.barrier >= maxEnemyShield/randomShieldChance && !maxShield && enemyAttackType == 0)
             attackDisplay.enableIndicator(6);
         else
             attackDisplay.enableIndicator(enemyAttackType);
+        if (attackVariants == 11)
+            attackVariants = 17;
         DoTheMario(enemyAttackType);
+    }
+
+    int PreviousItemCooldown(int currentItem)
+	{
+        if (currentItem == 9)
+            return clothRestoreAlt;
+        else if (currentItem == 12)
+            return mirrorRestoreAlt;
+        else if (currentItem == 13)
+            return appleRestoreAlt;
+        else if (currentItem == 14)
+            return venomRestoreAlt;
+        else if (currentItem == 15)
+            return hairRestoreAlt;
+        else
+            return 0;
     }
 
     IEnumerator ButterflyAttack()
@@ -1830,25 +2076,25 @@ public class BattleSystem : MonoBehaviour
 		{
             amountString = "Three";
         }
-        if (enemyAttackType == 0)
+        if (enemyAttackType == 0 || enemyAttackType == 8 || enemyAttackType == 9)
         {
             EnemyAttackIndicatorController.Instance.DeactivateParticles("Shield", "One");
             EnemyAttackIndicatorController.Instance.DeactivateParticles("Shield", "Two");
             EnemyAttackIndicatorController.Instance.DeactivateParticles("Shield", "Three");
             EnemyAttackIndicatorController.Instance.ActivateParticles("Shield", amountString);
         }
-        else if (enemyAttackType == 1)
+        else if (enemyAttackType == 1 || enemyAttackType >= 11)
         {
             EnemyAttackIndicatorController.Instance.ActivateParticles("Butterfly", amountString);
         }
-        else if (enemyAttackType == 2)
+        else if (enemyAttackType == 2 || enemyAttackType == 7)
         {
             EnemyAttackIndicatorController.Instance.DeactivateParticles("Bird", "One");
             EnemyAttackIndicatorController.Instance.DeactivateParticles("Bird", "Two");
             EnemyAttackIndicatorController.Instance.DeactivateParticles("Bird", "Three");
             EnemyAttackIndicatorController.Instance.ActivateParticles("Bird", amountString);
         }
-        else if (enemyAttackType == 3)
+        else if (enemyAttackType == 3 || enemyAttackType == 10)
         {
             EnemyAttackIndicatorController.Instance.DeactivateParticles("Cat", "One");
             EnemyAttackIndicatorController.Instance.DeactivateParticles("Cat", "Two");
@@ -3075,6 +3321,1206 @@ public class BattleSystem : MonoBehaviour
         }
     }
 
+    void ExtraAttacks(EnemyAttackIndicatorController attack)
+	{
+        if (attack.getEnabledIndicator() == 2)
+        {
+            StartCoroutine(BirdAttack());
+        }
+        else if (attack.getEnabledIndicator() == 3)
+        {
+            StartCoroutine(CatAttack());
+        }
+        else if (attack.getEnabledIndicator() == 0)
+        {
+            StartCoroutine(ShieldDefense());
+        }
+        else if (attack.getEnabledIndicator() == 1)
+        {
+            StartCoroutine(ButterflyAttack());
+        }
+        else if (attack.getEnabledIndicator() == 4)
+        {
+            StartCoroutine(RootsAttack());
+        }
+        else if (attack.getEnabledIndicator() == 5)
+        {
+            StartCoroutine(PunchAttack());
+        }
+        else if (attack.getEnabledIndicator() == 6)
+        {
+            StartCoroutine(ShieldAttack());
+        }
+    }
+
+    // Puppet Item Variants --------------------------------------------------------
+    IEnumerator CudgelAttack()
+    {
+        yield return new WaitWhile(() => talking);
+        if (!doneAttacks.Contains(7))
+            birdCounter += 1;
+        birdCounter += 1;
+        attackAmount += 1;
+        EnemyAttackIndicatorController.Instance.disableAllIndicators();
+        if (phase >= 2)
+            secondAttack.disableAllIndicators();
+        if (phase == 3)
+            thirdAttack.disableAllIndicators();
+        EnemyAttackIndicatorController.Instance.ResetParticles();
+        int stunChance = Random.Range(1, 5);
+        if ((!enemyStats.stun) || (enemyStats.stun && stunChance > 1 * playerHpMod * stunMax))
+        {
+
+            enemy.GetComponent<Animator>().SetTrigger("PCudgel");
+            yield return new WaitForSeconds(beatTime * 5.3f);
+            playerAnim.SetTrigger("Get Hurt");
+            yield return new WaitForSeconds(beatTime * 2.2f);
+            bool isDead = false;
+            if (enemyStats.vampirism)
+            {
+                if ((int)((1 * enemyAttackModifier * attackBuffAlt)) > playerStats.barrier)
+                {
+                    enemyStats.Heal(3);
+                    enemyDamageText2.gameObject.SetActive(false);
+                    enemyDamageText2.text = "<color=#FF3A3A>+" + (3);
+                    enemyDamageText2.gameObject.SetActive(true);
+                }
+            }
+            if (playerStats.TakeDamage((int)((4 * enemyAttackModifier * attackBuffAlt))))
+            {
+                isDead = true;
+            }
+            transitionMusic();
+            playerHUD.SetHP(playerStats);
+
+            if (playerStats.reflect)
+            {
+                if (enemyStats.TakeDamage((int)(enemyAttackModifier * 4 * (0.25f * playerHpMod) * reflectMax)))
+                {
+                    enemyStats.currentHP = 1;
+                    transitionMusic();
+                }
+                if ((enemyStats.currentHP <= enemyStats.maxHP * 0.5f) && phase == 1)
+                    StartCoroutine(Phase1MusicQuickStop());
+                enemyDamageText2.gameObject.SetActive(false);
+                enemyDamageText2.text = "-" + (int)(enemyAttackModifier * 4 * (0.25f * playerHpMod) * reflectMax);
+                enemyDamageText2.gameObject.SetActive(true);
+                enemyHUD.SetHP(enemyStats);
+            }
+
+            playerDamageText.gameObject.SetActive(false);
+            playerDamageText.text = "-" + (int)(4);
+            playerDamageText.gameObject.SetActive(true);
+            hitSound.Play();
+            // Can use Write Method here-------
+            yield return new WaitForSeconds(2.2f);
+            enemyAttackModifier = 1;
+            if (isDead)
+            {
+                state = BattleState.LOST;
+                EndBattle();
+            }
+            else
+            {
+                state = BattleState.PLAYERTURN;
+
+                if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                    maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+                else
+                    maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+                if (attackAmount >= phase)
+                {
+
+                    PlayerTurn();
+                    ChooseNextAttack(birdCounter, 7, EnemyAttackIndicatorController.Instance);
+                    if (phase >= 2)
+                    {
+                        ChooseNextAttack(birdCounter, 7, secondAttack);
+                    }
+                    if (phase == 3)
+                    {
+                        ChooseNextAttack(birdCounter, 7, thirdAttack);
+                    }
+
+                    if (birdCounter >= 2)
+                        birdCounter = 0;
+                }
+                else
+                {
+                    if (attackAmount == 1)
+                    {
+                        ExtraAttacks(secondAttack);
+                    }
+                    else if (attackAmount == 2)
+                    {
+                        ExtraAttacks(thirdAttack);
+                    }
+                }
+
+
+
+            }
+        }
+
+        else
+        {
+            enemyDamageText2.gameObject.SetActive(false);
+            enemyDamageText2.text = "<color=#C75700>STUN!";
+            enemyDamageText2.gameObject.SetActive(true);
+            yield return new WaitForSeconds(1);
+            state = BattleState.PLAYERTURN;
+
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(birdCounter, 7, EnemyAttackIndicatorController.Instance);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(birdCounter, 7, secondAttack);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(birdCounter, 7, thirdAttack);
+                }
+
+                if (birdCounter >= 2)
+                    birdCounter = 0;
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+    }
+
+    IEnumerator ClothHeal()
+    {
+        yield return new WaitWhile(() => talking);
+        if (!doneAttacks.Contains(8))
+            shieldCounter += 1;
+        attackAmount += 1;
+        EnemyAttackIndicatorController.Instance.disableAllIndicators();
+        if (phase >= 2)
+            secondAttack.disableAllIndicators();
+        if (phase == 3)
+            thirdAttack.disableAllIndicators();
+        EnemyAttackIndicatorController.Instance.ResetParticles();
+        int stunChance = Random.Range(1, 5);
+        if ((!enemyStats.stun) || (enemyStats.stun && stunChance > 1 * playerHpMod * stunMax))
+        {
+            enemyAnim.SetTrigger("Cloth");
+            yield return new WaitForSeconds(beatTime * 5);
+            if (enemyStats.currentHP == enemyStats.maxHP)
+            {
+            }
+            else
+            {
+                enemyDamageText2.gameObject.SetActive(false);
+                if ((enemyStats.currentHP + 6) <= enemyStats.maxHP)
+                    enemyDamageText2.text = "<color=#FF3A3A>+" + (int)(6);
+                else
+                    enemyDamageText2.text = "<color=#FF3A3A>+" + (enemyStats.maxHP - enemyStats.currentHP);
+                enemyDamageText2.gameObject.SetActive(true);
+                enemyStats.Heal(6);
+                transitionMusic();
+                enemyHUD.SetHP(enemyStats);
+            }
+            yield return new WaitForSeconds(beatTime * 4.5f);
+            clothRestoreAlt = clothCooldown;
+            // Can use Write Method here-------
+        }
+        else
+        {
+            enemyDamageText2.gameObject.SetActive(false);
+            enemyDamageText2.text = "<color=#C75700>STUN!";
+            enemyDamageText2.gameObject.SetActive(true);
+        }
+        yield return new WaitForSeconds(1);
+        state = BattleState.PLAYERTURN;
+        if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+            maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+        else
+            maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+        if (attackAmount >= phase)
+        {
+            PlayerTurn();
+            maxShield = false;
+            ChooseNextAttack(shieldCounter, 8, EnemyAttackIndicatorController.Instance, itemCooldown: clothRestoreAlt);
+            if (phase >= 2)
+            {
+                ChooseNextAttack(shieldCounter, 8, secondAttack, itemCooldown: clothRestoreAlt);
+            }
+            if (phase == 3)
+            {
+                ChooseNextAttack(shieldCounter, 8, thirdAttack, itemCooldown: clothRestoreAlt);
+            }
+
+            if (shieldCounter >= 2)
+                shieldCounter = 0;
+
+        }
+        else
+        {
+            if (attackAmount == 1)
+            {
+                ExtraAttacks(secondAttack);
+            }
+            else if (attackAmount == 2)
+            {
+                ExtraAttacks(thirdAttack);
+            }
+        }
+    }
+
+    IEnumerator HandsDefense()
+    {
+        yield return new WaitWhile(() => talking);
+        if (!doneAttacks.Contains(9))
+            shieldCounter += 1;
+        attackAmount += 1;
+        EnemyAttackIndicatorController.Instance.disableAllIndicators();
+        if (phase >= 2)
+            secondAttack.disableAllIndicators();
+        if (phase == 3)
+            thirdAttack.disableAllIndicators();
+        EnemyAttackIndicatorController.Instance.ResetParticles();
+        int stunChance = Random.Range(1, 5);
+        if ((!enemyStats.stun) || (enemyStats.stun && stunChance > 1 * playerHpMod * stunMax))
+        {
+            enemyAnim.SetTrigger("Hands");
+            yield return new WaitForSeconds(beatTime * 6f);
+            enemyDamageText2.gameObject.SetActive(false);
+            enemyDamageText2.text = "<color=#3E7EFF>+" + 4;
+            enemyDamageText2.gameObject.SetActive(true);
+            enemyStats.AddBarrier(4);
+
+            enemyHUD.SetHP(enemyStats);
+            yield return new WaitForSeconds(beatTime * 3.5f);
+            handsRestoreAlt = handsCooldown;
+            // Can use Write Method here-------
+        }
+        else
+        {
+            enemyDamageText2.gameObject.SetActive(false);
+            enemyDamageText2.text = "<color=#C75700>STUN!";
+            enemyDamageText2.gameObject.SetActive(true);
+        }
+        yield return new WaitForSeconds(1);
+        state = BattleState.PLAYERTURN;
+        if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+            maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+        else
+            maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+        if (attackAmount >= phase)
+        {
+            PlayerTurn();
+            maxShield = false;
+            ChooseNextAttack(shieldCounter, 9, EnemyAttackIndicatorController.Instance, itemCooldown: handsRestoreAlt);
+            if (phase >= 2)
+            {
+                ChooseNextAttack(shieldCounter, 9, secondAttack, itemCooldown: handsRestoreAlt);
+            }
+            if (phase == 3)
+            {
+                ChooseNextAttack(shieldCounter, 9, thirdAttack, itemCooldown: handsRestoreAlt);
+            }
+
+            if (shieldCounter >= 2)
+                shieldCounter = 0;
+
+        }
+        else
+        {
+            if (attackAmount == 1)
+            {
+                ExtraAttacks(secondAttack);
+            }
+            else if (attackAmount == 2)
+            {
+                ExtraAttacks(thirdAttack);
+            }
+        }
+    }
+
+    IEnumerator HatAttack()
+    {
+        yield return new WaitWhile(() => talking);
+        if (!doneAttacks.Contains(10))
+            catCounter += 1;
+        attackAmount += 1;
+        EnemyAttackIndicatorController.Instance.disableAllIndicators();
+        if (phase >= 2)
+            secondAttack.disableAllIndicators();
+        if (phase == 3)
+            thirdAttack.disableAllIndicators();
+        EnemyAttackIndicatorController.Instance.ResetParticles();
+        int randInt = Random.Range(1, 7);
+        int stunChance = Random.Range(1, 5);
+        if ((!enemyStats.stun) || (enemyStats.stun && stunChance > 1 * playerHpMod * stunMax))
+        {
+            enemyAnim.SetTrigger("Hat " + randInt);
+            yield return new WaitForSeconds(beatTime * 3.75f);
+            enemyDamageText.text = "-" + (int)((1 * playerAttackModifier * playerHpMod) * attackBuff);
+            bool isDead = false;
+            playerAnim.SetTrigger("Get Hurt");
+            for (int i = 0; i < randInt; i++)
+            {
+                if (enemyStats.vampirism)
+                {
+                    if ((int)((1 * enemyAttackModifier) * attackBuffAlt) > playerStats.barrier)
+                    {
+                        enemyStats.Heal(3);
+                        enemyDamageText2.gameObject.SetActive(false);
+                        enemyDamageText2.text = "<color=#FF3A3A>+" + (3);
+                        enemyDamageText2.gameObject.SetActive(true);
+                    }
+                }
+                if (playerStats.TakeDamage((int)((2 * enemyAttackModifier) * attackBuffAlt)))
+                {
+                    isDead = true;
+                }
+                if (playerStats.reflect)
+                {
+                    if (enemyStats.TakeDamage((int)(enemyAttackModifier * 2 * (0.25f * playerHpMod) * reflectMax)))
+                    {
+                        enemyStats.currentHP = 1;
+                        transitionMusic();
+                    }
+                    if ((enemyStats.currentHP <= enemyStats.maxHP * 0.5f) && phase == 1)
+                        StartCoroutine(Phase1MusicQuickStop());
+                    enemyDamageText2.gameObject.SetActive(false);
+                    enemyDamageText2.text = "-" + (int)(enemyAttackModifier * 2 * (0.25f * playerHpMod) * reflectMax);
+                    enemyDamageText2.gameObject.SetActive(true);
+                    enemyHUD.SetHP(enemyStats);
+                }
+                if (isDead)
+                {
+                    state = BattleState.LOST;
+                    EndBattle();
+                }
+                playerHUD.SetHP(playerStats);
+                enemyHUD.SetHP(enemyStats);
+                if (i == randInt - 1)
+                {
+                    hitSound.Play();
+                }
+                yield return new WaitForSeconds(beatTime / 2);
+            }
+            transitionMusic();
+            playerHUD.SetHP(playerStats);
+
+            // Can use Write Method here-------
+            enemyAttackModifier = 1;
+
+            if (!isDead)
+            {
+                yield return new WaitForSeconds(beatTime + ((beatTime / 2) * (6 - randInt)));
+                yield return new WaitForSeconds(1);
+                state = BattleState.PLAYERTURN;
+                if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                    maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+                else
+                    maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+                if (attackAmount >= phase)
+                {
+                    PlayerTurn();
+                    ChooseNextAttack(catCounter, 10, EnemyAttackIndicatorController.Instance);
+                    if (phase >= 2)
+                    {
+                        ChooseNextAttack(catCounter, 10, secondAttack);
+                    }
+                    if (phase == 3)
+                    {
+                        ChooseNextAttack(catCounter, 10, thirdAttack);
+                    }
+
+                    if (catCounter >= 2)
+                        catCounter = 0;
+
+                }
+                else
+                {
+                    if (attackAmount == 1)
+                    {
+                        ExtraAttacks(secondAttack);
+                    }
+                    else if (attackAmount == 2)
+                    {
+                        ExtraAttacks(thirdAttack);
+                    }
+                }
+            }
+        }
+        else
+        {
+            enemyDamageText2.gameObject.SetActive(false);
+            enemyDamageText2.text = "<color=#C75700>STUN!";
+            enemyDamageText2.gameObject.SetActive(true);
+            yield return new WaitForSeconds(1);
+            state = BattleState.PLAYERTURN;
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(catCounter, 10, EnemyAttackIndicatorController.Instance);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(catCounter, 10, secondAttack);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(catCounter, 10, thirdAttack);
+                }
+
+                if (catCounter >= 2)
+                    catCounter = 0;
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+    }
+
+    IEnumerator MirrorBuff()
+    {
+
+        yield return new WaitWhile(() => talking);
+        EnemyAttackIndicatorController.Instance.disableAllIndicators();
+        if (phase >= 2)
+            secondAttack.disableAllIndicators();
+        if (phase == 3)
+            thirdAttack.disableAllIndicators();
+        EnemyAttackIndicatorController.Instance.ResetParticles();
+        attackAmount += 1;
+        int stunChance = Random.Range(1, 5);
+        if (enemyStats.reflect)
+        {
+            reflectMaxAlt = 2;
+            maxTextAlt.gameObject.SetActive(false);
+            maxTextAlt.gameObject.SetActive(true);
+        }
+        if ((!enemyStats.stun) || (enemyStats.stun && stunChance > 1 * playerHpMod * stunMax))
+        {
+
+            enemy.GetComponent<Animator>().SetTrigger("Mirror");
+            yield return new WaitForSeconds(beatTime * 9.5f);
+            enemyStats.currentReflectDuration = enemyStats.reflectDuration;
+            enemyStats.reflect = true;
+            transitionMusic();
+            playerHUD.SetHP(playerStats);
+
+            UpdateEffectDisplay(enemyStats.buffDisplay, enemyStats.buffText, true, enemyStats);
+            // Shaky Effect
+            // Can use Write Method here-------
+            yield return new WaitForSeconds(0.28333333333f);
+            mirrorRestoreAlt = mirrorCooldown;
+            enemyAttackModifier = 1;
+            state = BattleState.PLAYERTURN;
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(0, 11, EnemyAttackIndicatorController.Instance, itemCooldown: mirrorRestoreAlt);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(0, 11, secondAttack, itemCooldown: mirrorRestoreAlt);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(0, 11, thirdAttack, itemCooldown: mirrorRestoreAlt);
+                }
+
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+        else
+        {
+            enemyDamageText2.gameObject.SetActive(false);
+            enemyDamageText2.text = "<color=#C75700>STUN!";
+            enemyDamageText2.gameObject.SetActive(true);
+            yield return new WaitForSeconds(1);
+            state = BattleState.PLAYERTURN;
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(0, 11, EnemyAttackIndicatorController.Instance, itemCooldown: mirrorRestoreAlt);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(0, 11, secondAttack, itemCooldown: mirrorRestoreAlt);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(0, 11, thirdAttack, itemCooldown: mirrorRestoreAlt);
+                }
+
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+    }
+
+    IEnumerator AppleBuff()
+    {
+
+        yield return new WaitWhile(() => talking);
+        EnemyAttackIndicatorController.Instance.disableAllIndicators();
+        if (phase >= 2)
+            secondAttack.disableAllIndicators();
+        if (phase == 3)
+            thirdAttack.disableAllIndicators();
+        EnemyAttackIndicatorController.Instance.ResetParticles();
+        attackAmount += 1;
+        int stunChance = Random.Range(1, 5);
+        if (enemyStats.dmgBoost)
+        {
+            dmgBoostMaxAlt = 2;
+            maxTextAlt.gameObject.SetActive(false);
+            maxTextAlt.gameObject.SetActive(true);
+        }
+        if ((!enemyStats.stun) || (enemyStats.stun && stunChance > 1 * playerHpMod * stunMax))
+        {
+
+            enemy.GetComponent<Animator>().SetTrigger("Apple");
+            yield return new WaitForSeconds(beatTime * 5);
+            enemyStats.currentDmgBoostDuration = enemyStats.dmgBoostDuration;
+            if (enemyStats.dmgBoost)
+            {
+                dmgBoostMax = 2;
+                maxText.gameObject.SetActive(false);
+                maxText.gameObject.SetActive(true);
+            }
+            enemyStats.dmgBoost = true;
+            transitionMusic();
+            enemyHUD.SetHP(enemyStats);
+
+            UpdateEffectDisplay(enemyStats.buffDisplay, enemyStats.buffText, true, enemyStats);
+            // Shaky Effect
+            // Can use Write Method here-------
+            yield return new WaitForSeconds(0.28333333333f);
+            appleRestoreAlt = appleCooldown;
+            enemyAttackModifier = 1;
+            state = BattleState.PLAYERTURN;
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(0, 12, EnemyAttackIndicatorController.Instance, itemCooldown: appleRestoreAlt);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(0, 12, secondAttack, itemCooldown: appleRestoreAlt);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(0, 12, thirdAttack, itemCooldown: appleRestoreAlt);
+                }
+
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+        else
+        {
+            enemyDamageText2.gameObject.SetActive(false);
+            enemyDamageText2.text = "<color=#C75700>STUN!";
+            enemyDamageText2.gameObject.SetActive(true);
+            yield return new WaitForSeconds(1);
+            state = BattleState.PLAYERTURN;
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(0, 12, EnemyAttackIndicatorController.Instance, itemCooldown: appleRestoreAlt);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(0, 12, secondAttack, itemCooldown: appleRestoreAlt);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(0, 12, thirdAttack, itemCooldown: appleRestoreAlt);
+                }
+
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+    }
+
+    IEnumerator VenomBuff()
+    {
+
+        yield return new WaitWhile(() => talking);
+        EnemyAttackIndicatorController.Instance.disableAllIndicators();
+        if (phase >= 2)
+            secondAttack.disableAllIndicators();
+        if (phase == 3)
+            thirdAttack.disableAllIndicators();
+        EnemyAttackIndicatorController.Instance.ResetParticles();
+        attackAmount += 1;
+        int stunChance = Random.Range(1, 5);
+        if (enemyStats.vampirism)
+        {
+            vampirismMaxAlt = 2;
+            maxTextAlt.gameObject.SetActive(false);
+            maxTextAlt.gameObject.SetActive(true);
+        }
+        if ((!enemyStats.stun) || (enemyStats.stun && stunChance > 1 * playerHpMod * stunMax))
+        {
+
+            enemyAnim.SetTrigger("Venom");
+            yield return new WaitForSeconds(beatTime * 6);
+            if (enemyStats.TakeDamage(3))
+                enemyStats.currentHP = 1;
+            enemyStats.currentVampirismDuration = enemyStats.vampirismDuration;
+            if (enemyStats.vampirism)
+            {
+                vampirismMaxAlt = 2;
+                maxText.gameObject.SetActive(false);
+                maxText.gameObject.SetActive(true);
+            }
+            enemyStats.vampirism = true;
+            transitionMusic();
+            enemyHUD.SetHP(enemyStats);
+
+            UpdateEffectDisplay(enemyStats.buffDisplay, enemyStats.buffText, true, enemyStats);
+            // Shaky Effect
+            // Can use Write Method here-------
+            yield return new WaitForSeconds(0.28333333333f);
+            venomRestoreAlt = venomCooldown;
+            enemyAttackModifier = 1;
+            state = BattleState.PLAYERTURN;
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(0, 13, EnemyAttackIndicatorController.Instance, itemCooldown: venomRestoreAlt);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(0, 13, secondAttack, itemCooldown: venomRestoreAlt);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(0, 13, thirdAttack, itemCooldown: venomRestoreAlt);
+                }
+
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+        else
+        {
+            enemyDamageText2.gameObject.SetActive(false);
+            enemyDamageText2.text = "<color=#C75700>STUN!";
+            enemyDamageText2.gameObject.SetActive(true);
+            yield return new WaitForSeconds(1);
+            state = BattleState.PLAYERTURN;
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(0, 13, EnemyAttackIndicatorController.Instance, itemCooldown: venomRestoreAlt);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(0, 13, secondAttack, itemCooldown: venomRestoreAlt);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(0, 13, thirdAttack, itemCooldown: venomRestoreAlt);
+                }
+
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+    }
+
+    IEnumerator HairAttack()
+    {
+
+        yield return new WaitWhile(() => talking);
+        EnemyAttackIndicatorController.Instance.disableAllIndicators();
+        if (phase >= 2)
+            secondAttack.disableAllIndicators();
+        if (phase == 3)
+            thirdAttack.disableAllIndicators();
+        EnemyAttackIndicatorController.Instance.ResetParticles();
+        attackAmount += 1;
+        int stunChance = Random.Range(1, 5);
+        if (playerStats.bind)
+        {
+            bindMaxAlt = 2;
+            maxTextAlt.gameObject.SetActive(false);
+            maxTextAlt.gameObject.SetActive(true);
+        }
+        if ((!enemyStats.stun) || (enemyStats.stun && stunChance > 1 * playerHpMod * stunMax))
+        {
+
+            enemyAnim.SetTrigger("PHair");
+            yield return new WaitForSeconds(beatTime * 6);
+            playerStats.currentBindDuration = playerStats.bindDuration;
+            if (playerStats.bind)
+            {
+                bindMaxAlt = 2;
+                maxText.gameObject.SetActive(false);
+                maxText.gameObject.SetActive(true);
+            }
+            playerStats.bind = true;
+            transitionMusic();
+            enemyHUD.SetHP(enemyStats);
+
+            UpdateEffectDisplay(playerStats.debuffDisplay, playerStats.debuffText, false, playerStats);
+            // Shaky Effect
+            // Can use Write Method here-------
+            yield return new WaitForSeconds(0.28333333333f);
+            hairRestoreAlt = hairCooldown;
+            enemyAttackModifier = 1;
+            state = BattleState.PLAYERTURN;
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(0, 14, EnemyAttackIndicatorController.Instance, itemCooldown: hairRestoreAlt);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(0, 14, secondAttack, itemCooldown: hairRestoreAlt);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(0, 14, thirdAttack, itemCooldown: hairRestoreAlt);
+                }
+
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+        else
+        {
+            enemyDamageText2.gameObject.SetActive(false);
+            enemyDamageText2.text = "<color=#C75700>STUN!";
+            enemyDamageText2.gameObject.SetActive(true);
+            yield return new WaitForSeconds(1);
+            state = BattleState.PLAYERTURN;
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(0, 14, EnemyAttackIndicatorController.Instance, itemCooldown: hairRestoreAlt);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(0, 14, secondAttack, itemCooldown: hairRestoreAlt);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(0, 14, thirdAttack, itemCooldown: hairRestoreAlt);
+                }
+
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+    }
+
+    IEnumerator BallBuff()
+    {
+
+        yield return new WaitWhile(() => talking);
+        EnemyAttackIndicatorController.Instance.disableAllIndicators();
+        if (phase >= 2)
+            secondAttack.disableAllIndicators();
+        if (phase == 3)
+            thirdAttack.disableAllIndicators();
+        EnemyAttackIndicatorController.Instance.ResetParticles();
+        attackAmount += 1;
+        int stunChance = Random.Range(1, 5);
+        if ((!enemyStats.stun) || (enemyStats.stun && stunChance > 1 * playerHpMod * stunMax))
+        {
+
+            enemyAnim.SetTrigger("Ball");
+            yield return new WaitForSeconds(beatTime * 6);
+
+            if (enemyStats.currentReflectDuration > 0)
+            {
+                enemyStats.currentReflectDuration += 1;
+            }
+            if (enemyStats.currentDmgBoostDuration > 0)
+            {
+                enemyStats.currentDmgBoostDuration += 1;
+            }
+            if (enemyStats.currentVampirismDuration > 0)
+            {
+                enemyStats.currentVampirismDuration += 1;
+            }
+
+            transitionMusic();
+            enemyHUD.SetHP(enemyStats);
+
+            UpdateEffectDisplay(enemyStats.buffDisplay, enemyStats.buffText, true, enemyStats);
+            // Shaky Effect
+            // Can use Write Method here-------
+            yield return new WaitForSeconds(0.28333333333f);
+            enemyAttackModifier = 1;
+            state = BattleState.PLAYERTURN;
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(0, 15, EnemyAttackIndicatorController.Instance);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(0, 15, secondAttack);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(0, 15, thirdAttack);
+                }
+
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+        else
+        {
+            enemyDamageText2.gameObject.SetActive(false);
+            enemyDamageText2.text = "<color=#C75700>STUN!";
+            enemyDamageText2.gameObject.SetActive(true);
+            yield return new WaitForSeconds(1);
+            state = BattleState.PLAYERTURN;
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(0, 15, EnemyAttackIndicatorController.Instance);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(0, 15, secondAttack);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(0, 15, thirdAttack);
+                }
+
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+    }
+
+    IEnumerator ShoesAttack()
+    {
+
+        yield return new WaitWhile(() => talking);
+        EnemyAttackIndicatorController.Instance.disableAllIndicators();
+        if (phase >= 2)
+            secondAttack.disableAllIndicators();
+        if (phase == 3)
+            thirdAttack.disableAllIndicators();
+        EnemyAttackIndicatorController.Instance.ResetParticles();
+        attackAmount += 1;
+        int stunChance = Random.Range(1, 5);
+        if (playerStats.stun && enemyStats.stun)
+        {
+            stunMaxAlt = 2;
+            maxTextAlt.gameObject.SetActive(false);
+            maxTextAlt.gameObject.SetActive(true);
+        }
+        if (playerStats.bind && enemyStats.bind)
+        {
+            bindMaxAlt = 2;
+            maxTextAlt.gameObject.SetActive(false);
+            maxTextAlt.gameObject.SetActive(true);
+        }
+        if ((!enemyStats.stun) || (enemyStats.stun && stunChance > 1 * playerHpMod * stunMax))
+        {
+
+
+            enemyAnim.SetTrigger("Shoes");
+            yield return new WaitForSeconds(beatTime * 9.5f);
+            if (enemyStats.stun)
+            {
+                playerStats.currentStunDuration = playerStats.stunDuration;
+                playerStats.stun = true;
+                UpdateEffectDisplay(playerStats.debuffDisplay, playerStats.debuffText, false, playerStats);
+                // Need to get code for activating debuff intigators
+                enemyStats.currentStunDuration = 0;
+                enemyStats.stun = false;
+                UpdateEffectDisplay(enemyStats.debuffDisplay, enemyStats.debuffText, false, enemyStats);
+            }
+
+            if (enemyStats.bind)
+            {
+                playerStats.currentBindDuration = playerStats.bindDuration;
+                playerStats.bind = true;
+                UpdateEffectDisplay(playerStats.debuffDisplay, playerStats.debuffText, false, playerStats);
+                // Need to get code for activating debuff intigators
+                enemyStats.currentBindDuration = 0;
+                enemyStats.bind = false;
+                UpdateEffectDisplay(enemyStats.debuffDisplay, enemyStats.debuffText, false, enemyStats);
+            }
+            transitionMusic();
+            playerHUD.SetHP(playerStats);
+
+            UpdateEffectDisplay(playerStats.debuffDisplay, playerStats.debuffText, false, playerStats);
+            // Shaky Effect
+            // Can use Write Method here-------
+            yield return new WaitForSeconds(0.28333333333f);
+            enemyAttackModifier = 1;
+            state = BattleState.PLAYERTURN;
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(0, 16, EnemyAttackIndicatorController.Instance);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(0, 16, secondAttack);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(0, 16, thirdAttack);
+                }
+
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+        else
+        {
+            enemyDamageText2.gameObject.SetActive(false);
+            enemyDamageText2.text = "<color=#C75700>STUN!";
+            enemyDamageText2.gameObject.SetActive(true);
+            yield return new WaitForSeconds(1);
+            state = BattleState.PLAYERTURN;
+            if (buffLocation.passiveBuff == "AttackSet" || buffLocation.passiveBuff == "ControlSet")
+                maxAttack = (int)(6 * playerAttackModifier * playerHpMod * attackBuff);
+            else
+                maxAttack = (int)(3 * playerAttackModifier * playerHpMod * attackBuff);
+
+
+            if (attackAmount >= phase)
+            {
+                PlayerTurn();
+                ChooseNextAttack(0, 16, EnemyAttackIndicatorController.Instance);
+                if (phase >= 2)
+                {
+                    ChooseNextAttack(0, 16, secondAttack);
+                }
+                if (phase == 3)
+                {
+                    ChooseNextAttack(0, 16, thirdAttack);
+                }
+
+
+            }
+            else
+            {
+                if (attackAmount == 1)
+                {
+                    ExtraAttacks(secondAttack);
+                }
+                else if (attackAmount == 2)
+                {
+                    ExtraAttacks(thirdAttack);
+                }
+            }
+        }
+    }
+
     // Method for Items -----------------------------------------------------------------------------
 
     // Method for Glock Item
@@ -3218,7 +4664,10 @@ public class BattleSystem : MonoBehaviour
         int stunChance = Random.Range(1, 3);
         if ((!playerStats.stun) || (playerStats.stun && stunChance == 1))
         {
-            playerAnim.SetTrigger("Cudgel");
+            if (puppetFight)
+                playerAnim.SetTrigger("PCudgel");
+            else
+                playerAnim.SetTrigger("Cudgel");
             bool isDead = false;
             if (enemyStats.TakeDamage((int)((3 * playerAttackModifier * playerHpMod) * attackBuff)))
             {
@@ -3241,9 +4690,19 @@ public class BattleSystem : MonoBehaviour
             }
             else
             {
-                yield return new WaitForSeconds(beatTime * 7.3f);
-                enemyAnim.SetTrigger("Owie");
-                yield return new WaitForSeconds(beatTime * 0.2f);
+
+                if (puppetFight)
+                {
+                    yield return new WaitForSeconds(beatTime * 5.3f);
+                    enemyAnim.SetTrigger("Get Hurt");
+                    yield return new WaitForSeconds(beatTime * 2.2f);
+                }
+                else
+                {
+                    yield return new WaitForSeconds(beatTime * 7.3f);
+                    enemyAnim.SetTrigger("Owie");
+                    yield return new WaitForSeconds(beatTime * 0.2f);
+                }
 
                 if (playerStats.vampirism)
                 {
@@ -3254,6 +4713,19 @@ public class BattleSystem : MonoBehaviour
                         playerDamageText.text = "<color=#FF3A3A>+" + ((int)(2 * playerHpMod * vampirismMax));
                         playerDamageText.gameObject.SetActive(true);
                     }
+                }
+
+                if (enemyStats.reflect)
+                {
+                    if (playerStats.TakeDamage((int)(playerAttackModifier * playerHpMod * 3 * (0.37f) * reflectMaxAlt)))
+                    {
+                        playerStats.currentHP = 1;
+                        transitionMusic();
+                    }
+                    playerDamageText.gameObject.SetActive(false);
+                    playerDamageText.text = "-" + (int)(playerAttackModifier * playerHpMod * 3 * (0.37f) * reflectMaxAlt);
+                    playerDamageText.gameObject.SetActive(true);
+                    playerHUD.SetHP(playerStats);
                 }
 
                 enemyDamageText.text = "-" + (int)((3 * playerAttackModifier * playerHpMod) * attackBuff);
@@ -3411,8 +4883,11 @@ public class BattleSystem : MonoBehaviour
         int stunChance = Random.Range(1, 3);
         if ((!playerStats.stun) || (playerStats.stun && stunChance == 1))
         {
-            
-            playerAnim.SetTrigger("Hair");
+
+            if (puppetFight)
+                playerAnim.SetTrigger("PHair");
+            else
+                playerAnim.SetTrigger("Hair");
             yield return new WaitForSeconds(beatTime * 6);
             enemyStats.currentBindDuration = enemyStats.bindDuration;
             if (enemyStats.bind)
@@ -3479,6 +4954,23 @@ public class BattleSystem : MonoBehaviour
             playerStats.stun = false;
             UpdateEffectDisplay(playerStats.debuffDisplay, playerStats.debuffText, false, playerStats);
         }
+
+        if (playerStats.bind)
+        {
+            enemyStats.currentBindDuration = enemyStats.bindDuration;
+            if (enemyStats.bind)
+            {
+                bindMax = 2;
+                maxText.gameObject.SetActive(false);
+                maxText.gameObject.SetActive(true);
+            }
+            enemyStats.bind = true;
+            UpdateEffectDisplay(enemyStats.debuffDisplay, enemyStats.debuffText, false, enemyStats);
+            // Need to get code for activating debuff intigators
+            playerStats.currentBindDuration = 0;
+            playerStats.bind = false;
+            UpdateEffectDisplay(playerStats.debuffDisplay, playerStats.debuffText, false, playerStats);
+        }
         else
         {
 
@@ -3512,10 +5004,16 @@ public class BattleSystem : MonoBehaviour
         if ((!playerStats.stun) || (playerStats.stun && stunChance == 1))
         {
             playerAnim.SetTrigger("Hat " + randInt);
-            yield return new WaitForSeconds(beatTime * 5.75f);
+            if (puppetFight)
+                yield return new WaitForSeconds(beatTime * 3.75f);
+            else
+                yield return new WaitForSeconds(beatTime * 5.75f);
             enemyDamageText.text = "-" + (int)((1 * playerAttackModifier * playerHpMod) * attackBuff);
             bool isDead = false;
-            enemyAnim.SetTrigger("Shot");
+            if (puppetFight)
+                enemyAnim.SetTrigger("Get Hurt");
+            else
+                enemyAnim.SetTrigger("Shot");
             for (int i = 0; i < randInt; i++)
             {
                 if (playerStats.vampirism)
@@ -3536,6 +5034,18 @@ public class BattleSystem : MonoBehaviour
                     {
                         enemyStats.currentHP = 1;
                     }
+                }
+                if (enemyStats.reflect)
+                {
+                    if (playerStats.TakeDamage((int)(playerAttackModifier * playerHpMod * 1 * (0.37f) * reflectMaxAlt)))
+                    {
+                        playerStats.currentHP = 1;
+                        transitionMusic();
+                    }
+                    playerDamageText.gameObject.SetActive(false);
+                    playerDamageText.text = "-" + (int)(playerAttackModifier * playerHpMod * 1 * (0.37f) * reflectMaxAlt);
+                    playerDamageText.gameObject.SetActive(true);
+                    playerHUD.SetHP(playerStats);
                 }
                 if (isDead)
                 {
@@ -3560,7 +5070,8 @@ public class BattleSystem : MonoBehaviour
             }
             if (!isDead)
             {
-                enemyAnim.SetTrigger("Unshot");
+                if (!puppetFight)
+                    enemyAnim.SetTrigger("Unshot");
                 yield return new WaitForSeconds(beatTime + ((beatTime / 2) * (6 - randInt)));
                 yield return new WaitForSeconds(1);
                 state = BattleState.ENEMYTURN;
@@ -3610,13 +5121,6 @@ public class BattleSystem : MonoBehaviour
             if (playerStats.currentVampirismDuration > 0)
             {
                 playerStats.currentVampirismDuration += 1 * (int)playerHpMod;
-            }
-
-            if (playerStats.stun)
-            {
-                playerStats.currentStunDuration = 0;
-                playerStats.stun = false;
-                UpdateEffectDisplay(playerStats.debuffDisplay, playerStats.debuffText, false, playerStats);
             }
 
             if (!noCooldowns)

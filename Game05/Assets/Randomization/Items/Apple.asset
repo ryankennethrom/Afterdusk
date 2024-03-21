@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Apple
   m_EditorClassIdentifier: 
   name: Apple
-  crossRoadsIcon: {fileID: 7835812578935788755, guid: 193f8a06587a44b4581d07211e91136d,
+  crossRoadsIcon: {fileID: -1525994765961120657, guid: 234710a43133f894d99b090b7cec0e27,
     type: 3}
   combatIcon: {fileID: 0}
   note: {fileID: 21300000, guid: 53a81a38054b12d4f8ac85aab2bea5df, type: 3}

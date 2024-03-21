@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Cloth
   m_EditorClassIdentifier: 
   name: Cloth
-  crossRoadsIcon: {fileID: -4558621180998824995, guid: 3ff7ddfa8dffdf649b244e8dd6bd13a8,
+  crossRoadsIcon: {fileID: 6505476446303673584, guid: 234710a43133f894d99b090b7cec0e27,
     type: 3}
   combatIcon: {fileID: 0}
   note: {fileID: 21300000, guid: fa50beb5290549940b9c0e6b954811a3, type: 3}

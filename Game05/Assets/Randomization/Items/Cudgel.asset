@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Cudgel
   m_EditorClassIdentifier: 
   name: Cudgel
-  crossRoadsIcon: {fileID: 847269605875675002, guid: 193f8a06587a44b4581d07211e91136d,
+  crossRoadsIcon: {fileID: -6192426536848704374, guid: 234710a43133f894d99b090b7cec0e27,
     type: 3}
   combatIcon: {fileID: 6892274491808584661, guid: 8b7d8f8650ddc974f9edf11ec316c191,
     type: 3}

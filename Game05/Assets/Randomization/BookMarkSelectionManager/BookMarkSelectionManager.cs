@@ -34,11 +34,13 @@ public class BookMarkSelectionManager : MonoBehaviour
     private string controlBuff = "Buff: No Item Cooldown";
     private string balanceBuff = "Buff: Max HP + 50%";
     private string knowledgeBuff = "Buff: ???";
+    private string tutorialBuff = "Buff: None";
 
     private string attackTitle = "Offense";
     private string defenseTitle = "Defense";
     private string controlTitle = "Control";
     private string balanceTitle = "Balance";
+    private string tutorialTitle = "Beginner";
 
     private string attackDifficulty = "Difficulty:\n4/4";
     private string defenseDifficulty = "Difficulty:\n2/4";
@@ -55,6 +57,8 @@ public class BookMarkSelectionManager : MonoBehaviour
     public GameObject redStar;
     public GameObject blueStar;
 
+    public bool tutorial = false;
+
     void Start(){
         bookMarkSelectionCanvas.enabled = false;
         redItems = new List<Item>();
@@ -67,18 +71,27 @@ public class BookMarkSelectionManager : MonoBehaviour
                                                           PlayerPrefs.GetInt("BalanceComplete", 0), PlayerPrefs.GetInt("OffenseComplete", 0) };
         int difficultyLevel = recommendedDifficulty.IndexOf(0);
         BookMarkSet redSet = null;
-        if (difficultyLevel > -1)
+        BookMarkSet blueSet = null;
+        if (tutorial)
         {
-            redSet = bookMarkSets[difficultyLevel];
-            bookMarkSets.RemoveAt(difficultyLevel);
+            redSet = bookMarkSets[0];
+            blueSet = bookMarkSets[0];
         }
-        List<BookMarkSet> shuffledBookMarkSets = bookMarkSets.OrderBy(x => Random.value).ToList();
-        if (difficultyLevel == -1)
+        else
         {
-            redSet = shuffledBookMarkSets[0];
-            recommendedText.SetActive(false);
+            if (difficultyLevel > -1)
+            {
+                redSet = bookMarkSets[difficultyLevel];
+                bookMarkSets.RemoveAt(difficultyLevel);
+            }
+            List<BookMarkSet> shuffledBookMarkSets = bookMarkSets.OrderBy(x => Random.value).ToList();
+            if (difficultyLevel == -1)
+            {
+                redSet = shuffledBookMarkSets[0];
+                recommendedText.SetActive(false);
+            }
+            blueSet = shuffledBookMarkSets[1];
         }
-        BookMarkSet blueSet = shuffledBookMarkSets[1];
         redMessage = redSet.setName;
         blueMessage = blueSet.setName;
         redItems = redSet.items;
@@ -147,6 +160,12 @@ public class BookMarkSelectionManager : MonoBehaviour
         else if (redSet.setName == "KnowledgeSet")
         {
             redBuff.text = knowledgeBuff;
+        }
+        else if (redSet.setName == "TutorialSet")
+        {
+            redBuff.text = tutorialBuff;
+            redTitle.text = tutorialTitle + " |";
+            redDifficulty.text = controlDifficulty;
         }
 
         if (blueSet.setName == "AttackSet")
