@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Crystal Ball
   m_EditorClassIdentifier: 
   name: Crystal Ball
-  crossRoadsIcon: {fileID: 4739631652092024067, guid: 193f8a06587a44b4581d07211e91136d,
+  crossRoadsIcon: {fileID: -3982699897904846022, guid: 234710a43133f894d99b090b7cec0e27,
     type: 3}
   combatIcon: {fileID: 0}
   note: {fileID: 21300000, guid: 90ad3ba65f082af43800d9ce7904e744, type: 3}

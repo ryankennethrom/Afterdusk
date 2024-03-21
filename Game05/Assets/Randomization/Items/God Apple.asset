@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 352e5f3aa76b8534a84cea6d88740caf, type: 3}
+  m_Name: God Apple
+  m_EditorClassIdentifier: 
+  name: God Apple
+  crossRoadsIcon: {fileID: 21300000, guid: cf4f9b35c1c49c84c811522e0e9a8f8d, type: 3}
+  combatIcon: {fileID: 0}
+  note: {fileID: 21300000, guid: 53a81a38054b12d4f8ac85aab2bea5df, type: 3}

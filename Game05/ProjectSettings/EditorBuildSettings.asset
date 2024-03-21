@@ -5,7 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/DifficultyChoiceScreen.unity
     guid: 66a5bb2de1e56054b9dab68277b42389
   - enabled: 1
@@ -15,7 +15,13 @@ EditorBuildSettings:
     path: Assets/Scenes/MainScreenScene.unity
     guid: 9a574197d4f720c479c9d223bbfd01d3
   - enabled: 1
-    path: Assets/Scenes/CrossroadsPuppet.unity
+    path: Assets/Scenes/SnowCrossroads.unity
+    guid: 2e22fa58acb6f7f4485578f9f364154c
+  - enabled: 1
+    path: Assets/Scenes/SnowWhite.unity
+    guid: 96e5a62599383ca4cbf7ab4b99f46cbc
+  - enabled: 1
+    path: Assets/Scenes/PuppetCrossroads.unity
     guid: 7327648a2e6c1174a861bcf9159c9162
   - enabled: 1
     path: Assets/Scenes/Puppet.unity

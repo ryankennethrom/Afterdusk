@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Venom
   m_EditorClassIdentifier: 
   name: Venom
-  crossRoadsIcon: {fileID: -1420537483633089118, guid: 193f8a06587a44b4581d07211e91136d,
+  crossRoadsIcon: {fileID: -5412965304042177415, guid: 234710a43133f894d99b090b7cec0e27,
     type: 3}
   combatIcon: {fileID: 0}
   note: {fileID: 21300000, guid: 985a5e6f3e77a8847aa842c1abfd88a9, type: 3}

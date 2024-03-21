@@ -6629,6 +6629,11 @@ PrefabInstance:
       objectReference: {fileID: 681372651}
     - target: {fileID: 6732032535996845814, guid: cfa6cd3bdcf5e0440b4695f3022d6c11,
         type: 3}
+      propertyPath: tutorial
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6732032535996845814, guid: cfa6cd3bdcf5e0440b4695f3022d6c11,
+        type: 3}
       propertyPath: blueTitle
       value: 
       objectReference: {fileID: 11839382}
@@ -6670,7 +6675,7 @@ PrefabInstance:
     - target: {fileID: 6732032535996845814, guid: cfa6cd3bdcf5e0440b4695f3022d6c11,
         type: 3}
       propertyPath: bookMarkSets.Array.size
-      value: 4
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6732032535996845814, guid: cfa6cd3bdcf5e0440b4695f3022d6c11,
         type: 3}
@@ -6682,7 +6687,7 @@ PrefabInstance:
         type: 3}
       propertyPath: bookMarkSets.Array.data[0]
       value: 
-      objectReference: {fileID: 11400000, guid: cc29a79da9a887443854380c365561a7,
+      objectReference: {fileID: 11400000, guid: 2441adbb56b33d647a9938e70a07317c,
         type: 2}
     - target: {fileID: 6732032535996845814, guid: cfa6cd3bdcf5e0440b4695f3022d6c11,
         type: 3}
@@ -9588,7 +9593,7 @@ MonoBehaviour:
   - {fileID: 176108216}
   - {fileID: 1803153050}
   dialogueCSVs:
-  - {fileID: 4900000, guid: d964b750ffd7f4087951ff1175f63796, type: 3}
+  - {fileID: 4900000, guid: adb3355b6cde34245ac1a17ce6755754, type: 3}
   - {fileID: 4900000, guid: 7627185fbfae04378a6369f3c66f6cac, type: 3}
   choiceTexts:
   - The Red Bookmark
