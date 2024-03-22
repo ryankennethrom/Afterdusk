@@ -51,6 +51,12 @@ public class HoverForDescription : MonoBehaviour
                 if (knowledgeBag)
                 {
                     description.text = "<b>        " + itemName + "\n                 </b>" + itemDescription + "\n            " + effect1;
+                    if(HPReference.phase == 2){
+                        description.text = "<b>        " + itemName + "\n                 </b>" + itemDescription + "\n            " + "Only becomes\n            effective when\n            maxed.";
+                        if (maxTime){
+                            description.text = "<b>        " + itemName + "\n                 </b>" + itemDescription + "\n            " + "Boosts your attack\n             power by" + "<b>" + trueChange + "</b>" + effect2;
+                        }
+                    }
                 }
                 battleDescription.SetActive(true);
             }

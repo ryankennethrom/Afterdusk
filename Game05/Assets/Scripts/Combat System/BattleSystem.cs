@@ -78,6 +78,7 @@ public class BattleSystem : MonoBehaviour
     public int venomCooldown = 5;
     public int handsCooldown = 2;
     public int hairCooldown = 4;
+    public int godAppleCooldown = 2;
     public int mirrorRestore = 0;
     public int clothRestore = 0;
     public int ballRestore = 0;
@@ -85,6 +86,7 @@ public class BattleSystem : MonoBehaviour
     public int venomRestore = 0;
     public int handsRestore = 0;
     public int hairRestore = 0;
+    public int godAppleRestore = 0;
     // Alt is for puppet items
     public int mirrorRestoreAlt = 0;
     public int clothRestoreAlt = 0;
@@ -101,6 +103,7 @@ public class BattleSystem : MonoBehaviour
     public GameObject venomObject;
     public GameObject handsObject;
     public GameObject hairObject;
+    public GameObject godAppleObject;
     public bool noCooldowns = false;
     public bool immune = false;
 
@@ -120,6 +123,7 @@ public class BattleSystem : MonoBehaviour
     private int vampirismMaxAlt = 1;
     private int bindMaxAlt = 1;
     private int stunMaxAlt = 1;
+    private int maxMax = 0;
 
     // Item First Use Trackers
     private bool CudgelFirstUse;
@@ -143,7 +147,7 @@ public class BattleSystem : MonoBehaviour
     public GameObject miniNarrator;
     public GameObject pointer;
 
-    private int phase = 1;
+    public int phase = 1;
     public GameObject x2Text;
     public GameObject x3Text;
     public TextMeshProUGUI playerDamageText;
@@ -179,6 +183,7 @@ public class BattleSystem : MonoBehaviour
     public VideoPlayer increaseMusicSpeed;
     public bool easy = true;
     public bool puppetFight = false;
+    public bool tutorial = false;
 
     void Start(){
         state = BattleState.START;
@@ -351,6 +356,10 @@ public class BattleSystem : MonoBehaviour
 
     IEnumerator DelayedPhase3()
 	{
+        if(tutorial){
+            godAppleObject.SetActive(false);
+            appleObject.SetActive(true);
+        }
         yield return new WaitForSeconds(beatTime * 50);
         phaseTransition.SetTrigger("Phase 3");
         ChangeIdleAnimation(enemyAnim, angry2);
@@ -398,6 +407,10 @@ public class BattleSystem : MonoBehaviour
         }
         else if ((enemyStats.currentHP <= 0.25 * enemyStats.maxHP) && phase == 2)
         {
+            if (tutorial){
+                godAppleObject.SetActive(false);
+                appleObject.SetActive(true);
+            }
             phaseTransition.SetTrigger("Phase 3");
             ChangeIdleAnimation(enemyAnim, angry2);
             phaseChange.MakeConversation(2, 10.15873015873016f / 2);
@@ -583,7 +596,7 @@ public class BattleSystem : MonoBehaviour
 	{
         if (buffs)
 		{
-            if (!character.reflect && !character.dmgBoost && !character.vampirism)
+            if (!character.reflect && !character.dmgBoost && !character.vampirism && !character.max)
 			{
                 display.SetActive(false);
                 text.text = "";
@@ -609,6 +622,20 @@ public class BattleSystem : MonoBehaviour
                         text.text = "<color=#696969>VAMPIRISM";
                     else
                         text.text += ", <color=#696969>VAMPIRISM";
+                }
+                if (character.max)
+                {
+                    if(maxMax == 0){
+                        if (text.text == "")
+                            text.text = "<color=#FFFFFF>???";
+                        else
+                            text.text += ", <color=#FFFFFF>???";
+                    } else {
+                        if (text.text == "")
+                            text.text = "<color=#FFFFFF>MAX ATTACK";
+                        else
+                            text.text += ", <color=#FFFFFF>MAX ATTACK";
+                    }
                 }
             }
 		}
@@ -674,6 +701,22 @@ public class BattleSystem : MonoBehaviour
                 }
                 else
                     dmgBoostMaxAlt = 1;
+                UpdateEffectDisplay(stats.buffDisplay, stats.buffText, true, stats);
+            }
+        }
+        if (stats.currentMaxDuration > 0)
+        {
+            stats.currentMaxDuration -= 1;
+            if (stats.currentMaxDuration == 0)
+            {
+                stats.max = false;
+                if (stats == playerStats)
+                {
+                    if (dmgBoostMax >= 2)
+                        EnableItem(godAppleObject);
+                    dmgBoostMax = 1;
+                    godAppleObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = false;
+                }
                 UpdateEffectDisplay(stats.buffDisplay, stats.buffText, true, stats);
             }
         }
@@ -799,6 +842,15 @@ public class BattleSystem : MonoBehaviour
                 EnableItem(appleObject);
             }
         }
+         if (godAppleRestore > 0)
+        {
+            godAppleRestore -= 1;
+            godAppleObject.transform.Find("ItemName").gameObject.GetComponent<TextMeshProUGUI>().text = "Cooldown: " + godAppleRestore;
+            if (godAppleRestore == 0)
+            {
+                EnableItem(godAppleObject);
+            }
+        }
         if (venomRestore > 0)
         {
             venomRestore -= 1;
@@ -896,6 +948,22 @@ public class BattleSystem : MonoBehaviour
             appleObject.transform.Find("ItemName").gameObject.GetComponent<TextMeshProUGUI>().text = "Maxed Out!";
         }
 
+        // God Apple
+        godAppleObject.transform.Find("MAXFLAME").gameObject.SetActive(false);
+        if (godAppleRestore <= 0 && playerStats.max && maxMax < 2)
+        {
+            godAppleObject.transform.Find("MAXFLAME").gameObject.SetActive(true);
+            godAppleObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = true;
+        }
+        else if (maxMax >= 2)
+        {
+            godAppleObject.GetComponent<Button>().interactable = false;
+            godAppleObject.transform.Find("ItemIcon").gameObject.GetComponent<Image>().color = new Color(0.4f, 0.4f, 0.4f, 1.0f);
+            godAppleObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().disabled = true;
+            godAppleObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().maxTime = false;
+            godAppleObject.transform.Find("ItemName").gameObject.GetComponent<TextMeshProUGUI>().text = "Maxed Out!";
+        }
+
         // Shoes
         shoesObject.transform.Find("MAXFLAME").gameObject.SetActive(false);
         if (playerStats.stun && enemyStats.stun && stunMax < 2)
@@ -979,6 +1047,31 @@ public class BattleSystem : MonoBehaviour
             shoesObject.transform.Find("ItemName").gameObject.GetComponent<TextMeshProUGUI>().text = "";
         }
 
+        if (!playerStats.vampirism && !playerStats.dmgBoost && !playerStats.reflect && !playerStats.max)
+		{
+            ballObject.GetComponent<Button>().interactable = false;
+            ballObject.transform.Find("ItemIcon").gameObject.GetComponent<Image>().color = new Color(0.4f, 0.4f, 0.4f, 1.0f);
+        }
+        else
+		{
+            ballObject.GetComponent<Button>().interactable = true;
+            ballObject.transform.Find("ItemIcon").gameObject.GetComponent<Image>().color = new Color(1.0f, 1.0f, 1.0f, 1.0f);
+            ballObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().disabled = false;
+            ballObject.transform.Find("ItemName").gameObject.GetComponent<TextMeshProUGUI>().text = "";
+        }
+        if (phase == 1)
+		{
+            godAppleObject.GetComponent<Button>().interactable = false;
+            godAppleObject.transform.Find("ItemIcon").gameObject.GetComponent<Image>().color = new Color(0.4f, 0.4f, 0.4f, 1.0f);
+        }
+        else
+		{
+            godAppleObject.GetComponent<Button>().interactable = true;
+            godAppleObject.transform.Find("ItemIcon").gameObject.GetComponent<Image>().color = new Color(1.0f, 1.0f, 1.0f, 1.0f);
+            godAppleObject.transform.Find("ItemIcon").gameObject.GetComponent<HoverForDescription>().disabled = false;
+            godAppleObject.transform.Find("ItemName").gameObject.GetComponent<TextMeshProUGUI>().text = "";
+        }
+
         MaxUpdate();
 
         // Buff Logic =============
@@ -1000,6 +1093,10 @@ public class BattleSystem : MonoBehaviour
         if (playerStats.bind)
         {
             playerAttackModifier = playerAttackModifier - (0.37f * bindMaxAlt);
+        }
+        if (playerStats.max)
+        {
+            playerAttackModifier = playerAttackModifier + (1f * maxMax);
         }
         //=========================
 
@@ -2398,6 +2495,9 @@ public class BattleSystem : MonoBehaviour
             int barrier = (int)(Random.Range((int)(enemyStats.damage*0.6667f), enemyStats.damage + 1));
             if (maxShield)
                 barrier = enemyStats.damage;
+            if (tutorial && phase < 3){
+                barrier = 10;
+            }
             enemyStats.AddBarrier(barrier);
             enemyHUD.SetHP(enemyStats);
             // Can use Write Method here-------
@@ -5188,6 +5288,55 @@ public class BattleSystem : MonoBehaviour
         // Buff Indicator handling needed here!
     }
 
+    // Method for God Apple
+    IEnumerator UseGodApple()
+    {
+        if (badMusicSync)
+        {
+            float waitTime = GetNextBeat(4);
+            Debug.Log(waitTime);
+            if (waitTime > (beatTime * 1))
+            {
+                yield return new WaitForSeconds(waitTime - (beatTime * 1));
+            }
+            else
+            {
+                yield return new WaitForSeconds(waitTime + (beatTime * 3));
+            }
+        }
+        int stunChance = Random.Range(1, 3);
+        if ((!playerStats.stun) || (playerStats.stun && stunChance == 1))
+        {
+            playerAnim.SetTrigger("Apple");
+            yield return new WaitForSeconds(beatTime * 5);
+            playerStats.currentMaxDuration = playerStats.maxDuration;
+            if (playerStats.max)
+			{
+                maxMax = 10;
+                maxText.gameObject.SetActive(false);
+                maxText.gameObject.SetActive(true);
+            }
+            playerStats.max = true;
+            UpdateEffectDisplay(playerStats.buffDisplay, playerStats.buffText, true, playerStats);
+            yield return new WaitForSeconds(beatTime * 2);
+
+            if (!noCooldowns)
+                godAppleRestore = DisableItem(godAppleObject, godAppleCooldown);
+        }
+        else
+        {
+            playerDamageText.gameObject.SetActive(false);
+            playerDamageText.text = "<color=#C75700>STUN!";
+            playerDamageText.gameObject.SetActive(true);
+            yield return new WaitForSeconds(1);
+        }
+
+        yield return new WaitForSeconds(1);
+        state = BattleState.ENEMYTURN;
+        EnemyTurn();
+        // Buff Indicator handling needed here!
+    }
+
     // Method for White Snake Venom Item
     IEnumerator UseVenom()
     {
@@ -5362,6 +5511,16 @@ public class BattleSystem : MonoBehaviour
         }
 
         StartCoroutine(UseApple());
+
+    }
+
+    public void OnGodAppleUsed(){
+        closeAllInterface();
+        if(state != BattleState.PLAYERTURN){
+            return;
+        }
+
+        StartCoroutine(UseGodApple());
 
     }
 

@@ -29,6 +29,7 @@ public class Stats: MonoBehaviour
     public bool vampirism = false;
     public bool bind = false;
     public bool stun = false;
+    public bool max = false;
     public GameObject buffDisplay;
     public GameObject debuffDisplay;
     public TextMeshProUGUI buffText;
@@ -39,12 +40,14 @@ public class Stats: MonoBehaviour
     public int vampirismDuration = 4;
     public int bindDuration = 3;
     public int stunDuration = 3;
+    public int maxDuration = 2;
 
     public int currentReflectDuration = 0;
     public int currentDmgBoostDuration = 0;
     public int currentVampirismDuration = 0;
     public int currentBindDuration = 0;
     public int currentStunDuration = 0;
+    public int currentMaxDuration = 0;
 
     // Method for taking damage
     public bool TakeDamage(int dmg){
